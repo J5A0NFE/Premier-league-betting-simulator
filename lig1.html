@@ -1,0 +1,2009 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<title>Premier League Simulator</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background-color: #121212;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    display: flex;
+    gap: 40px;
+    padding: 20px;
+    margin: 0;
+  }
+  /* Header Controls */
+  .header-controls {
+    position: fixed;
+    top: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 1000;
+  }
+  #playButton {
+    background: #03dac5;
+    color: black;
+    padding: 10px 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .user-info {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  #userProfile {
+    background: #2196f3;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: none;
+  }
+  #balance {
+    background: #ff9800;
+    color: black;
+    padding: 10px 20px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  #settingsBtn {
+    background: #9c27b0;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  #loginBtn {
+    background: #4caf50;
+    color: white;
+    padding: 10px 20px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  /* Main Content */
+  #fixture, #standings {
+    flex: 1;
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 90vh;
+    position: relative;
+    margin-top: 60px;
+  }
+  .match, .team-row {
+    padding: 8px;
+    border-radius: 8px;
+    margin: 5px 0;
+  }
+  .match {
+    background-color: #2c2c2c;
+    position: relative;
+  }
+  .team-row {
+    display: flex;
+    justify-content: space-between;
+    transition: transform 0.5s ease, background-color 0.5s ease;
+  }
+  .week {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+  }
+  .day {
+    margin-top: 10px;
+  }
+  .highlight {
+    font-weight: bold;
+    transform: scale(1.05);
+  }
+  #timeCounter {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: #03dac5;
+    color: black;
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  #goalAlert {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ff3b3b;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    pointer-events: none;
+    z-index: 2000;
+  }
+  #goalAlert.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .waiting-match {
+    background-color: #404040;
+    border: 2px dashed #03dac5;
+  }
+  .playing-match {
+    background-color: #2c2c2c;
+    border: 2px solid #03dac5;
+  }
+  .finished-match {
+    background-color: #1a1a1a;
+    border: 2px solid #666;
+  }
+  /* Modal Styles */
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    display: none;
+    z-index: 3000;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-content {
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .close-modal {
+    background: #ff3b3b;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  /* Form Styles */
+  .form-group {
+    margin: 15px 0;
+  }
+  .form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #444;
+    border-radius: 5px;
+    background-color: #333;
+    color: white;
+    font-size: 16px;
+  }
+  .form-group input:focus {
+    border-color: #03dac5;
+    outline: none;
+  }
+  .btn {
+    background-color: #03dac5;
+    color: black;
+    border: none;
+    border-radius: 5px;
+    padding: 12px 25px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    width: 100%;
+    margin: 10px 0;
+  }
+  .btn:hover {
+    background-color: #00bfa5;
+  }
+  .btn-secondary {
+    background-color: #666;
+    color: white;
+  }
+  .btn-secondary:hover {
+    background-color: #777;
+  }
+  /* Betting Panel */
+  .betting-panel {
+    background-color: #333;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px 0;
+    border: 2px solid #ff9800;
+  }
+  .betting-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin: 10px 0;
+  }
+  .bet-option {
+    background-color: #555;
+    border: 2px solid #777;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+  }
+  .bet-option:hover {
+    background-color: #666;
+    border-color: #ff9800;
+  }
+  .bet-option.selected {
+    background-color: #ff9800;
+    color: black;
+    border-color: #ffb74d;
+  }
+  .bet-amount-container {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .bet-amount-input {
+    background-color: #444;
+    color: white;
+    border: 2px solid #666;
+    border-radius: 5px;
+    padding: 8px;
+    width: 100px;
+  }
+  .bet-button {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .bet-button:hover {
+    background-color: #45a049;
+  }
+  .bet-button:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+  }
+  .current-bet {
+    background-color: #4caf50;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+  }
+  /* Achievements */
+  .achievement {
+    background-color: #333;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    border-left: 4px solid #666;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .achievement.unlocked {
+    border-left-color: #ffd700;
+    background-color: #404040;
+  }
+  .achievement-icon {
+    font-size: 24px;
+    margin-right: 10px;
+  }
+  /* History Items */
+  .bet-history-item {
+    background-color: #333;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 5px;
+    border-left: 4px solid #666;
+  }
+  .bet-history-item.win {
+    border-left-color: #4caf50;
+  }
+  .bet-history-item.lose {
+    border-left-color: #f44336;
+  }
+  /* Tabs */
+  .tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #333;
+  }
+  .tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+  }
+  .tab.active {
+    border-bottom-color: #03dac5;
+    background-color: #333;
+  }
+  .tab-content {
+    display: none;
+  }
+  .tab-content.active {
+    display: block;
+  }
+  /* Leaderboard */
+  .leaderboard-item {
+    background-color: #333;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .leaderboard-rank {
+    font-size: 24px;
+    font-weight: bold;
+    color: #03dac5;
+    min-width: 50px;
+  }
+  /* Settings */
+  .setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #333;
+  }
+  .setting-item:last-child {
+    border-bottom: none;
+  }
+  /* Responsive */
+  @media (max-width: 768px) {
+    body {
+      flex-direction: column;
+      gap: 20px;
+    }
+    .header-controls {
+      position: relative;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #fixture, #standings {
+      margin-top: 20px;
+    }
+    .betting-options {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+  <!-- Header Controls -->
+  <div class="header-controls">
+    <button id="playButton">Maçı Başlat</button>
+    <div class="user-info">
+      <div id="userProfile">👤 Kullanıcı</div>
+      <div id="balance">💰 10,000 TL</div>
+      <div id="settingsBtn">⚙️</div>
+      <button id="loginBtn">Giriş Yap</button>
+    </div>
+  </div>
+  <!-- Main Content -->
+  <div id="fixture"></div>
+  <div id="standings"></div>
+  <div id="goalAlert"></div>
+
+  <!-- Login Modal -->
+  <div id="loginModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Giriş Yap / Kayıt Ol</h2>
+        <button class="close-modal" onclick="closeModal('loginModal')">✕</button>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('login')">Giriş Yap</div>
+        <div class="tab" onclick="switchTab('register')">Kayıt Ol</div>
+      </div>
+      <div id="loginTab" class="tab-content active">
+        <form id="loginForm">
+          <div class="form-group">
+            <label>Kullanıcı Adı:</label>
+            <input type="text" id="loginUsername" required>
+          </div>
+          <div class="form-group">
+            <label>Şifre:</label>
+            <input type="password" id="loginPassword" required>
+          </div>
+          <button type="submit" class="btn">Giriş Yap</button>
+        </form>
+      </div>
+      <div id="registerTab" class="tab-content">
+        <form id="registerForm">
+          <div class="form-group">
+            <label>Kullanıcı Adı:</label>
+            <input type="text" id="registerUsername" required>
+          </div>
+          <div class="form-group">
+            <label>Şifre:</label>
+            <input type="password" id="registerPassword" required>
+          </div>
+          <div class="form-group">
+            <label>Şifre Tekrar:</label>
+            <input type="password" id="registerPasswordConfirm" required>
+          </div>
+          <button type="submit" class="btn">Kayıt Ol</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Balance Modal -->
+  <div id="balanceModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Hesap Bilgileri</h2>
+        <button class="close-modal" onclick="closeModal('balanceModal')">✕</button>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="switchBalanceTab('balance')">Bakiye</div>
+        <div class="tab" onclick="switchBalanceTab('history')">Geçmiş</div>
+        <div class="tab" onclick="switchBalanceTab('achievements')">Başarımlar</div>
+        <div class="tab" onclick="switchBalanceTab('leaderboard')">Liderlik</div>
+        <div class="tab" onclick="switchBalanceTab('statistics')">İstatistikler</div>
+      </div>
+
+      <div id="balanceTabContent" class="tab-content active">
+        <div id="balanceInfo">
+          <p><strong>Mevcut Bakiye:</strong> <span id="modalBalance">10,000 TL</span></p>
+          <p><strong>Toplam İddia:</strong> <span id="totalBets">0</span></p>
+          <p><strong>Kazanılan:</strong> <span id="totalWins">0</span></p>
+          <p><strong>Kaybedilen:</strong> <span id="totalLosses">0</span></p>
+          <p><strong>Başarım Puanı:</strong> <span id="achievementPoints">0</span></p>
+        </div>
+      </div>
+
+      <div id="historyTabContent" class="tab-content">
+        <div id="betHistory"></div>
+      </div>
+
+      <div id="achievementsTabContent" class="tab-content">
+        <div id="achievementsList"></div>
+      </div>
+
+      <div id="leaderboardTabContent" class="tab-content">
+        <div id="leaderboardList"></div>
+      </div>
+
+      <div id="statisticsTabContent" class="tab-content">
+        <div id="statsContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Ayarlar</h2>
+        <button class="close-modal" onclick="closeModal('settingsModal')">✕</button>
+      </div>
+      <div class="setting-item">
+        <label>Maç Hızı:</label>
+        <select id="gameSpeed">
+          <option value="50">Çok Hızlı</option>   
+          <option value="100">Hızlı</option>
+          <option value="150" selected>Normal</option>
+          <option value="200">Yavaş</option>
+        </select>
+      </div>
+      <div class="setting-item">
+        <label>Ses Efektleri:</label>
+        <input type="checkbox" id="soundEffects" checked>
+      </div>
+      <div class="setting-item">
+        <label>Otomatik Kaydet:</label>
+        <input type="checkbox" id="autoSave" checked>
+      </div>
+      <div class="setting-item">
+        <label>Karanlık Mod:</label>
+        <input type="checkbox" id="darkMode" checked>
+      </div>
+      <button class="btn" onclick="saveSettings()">Ayarları Kaydet</button>
+      <button class="btn btn-secondary" onclick="logout()">Çıkış Yap</button>
+    </div>
+  </div>
+
+<script>
+// ==================== TAKIM VERİTABANI (Gerçek Takımlar + Oyuncular) ====================
+const teamDatabase = {
+  "Arsenal": {
+    name: "Arsenal",
+    shortName: "ARS",
+    founded: 1886,
+    stadium: "Emirates Stadium",
+    capacity: 60704,
+    manager: "Mikel Arteta",
+    colors: { primary: "#EF0107", secondary: "#FFFFFF", accent: "#F2F2F2" },
+    form: [],
+    teamStats: {
+      avgGoalsFor: 2.2,
+      avgGoalsAgainst: 0.9,
+      avgCorners: 5.9,
+      avgCards: 1.8,
+      homeStrength: 82,
+      awayStrength: 73
+    },
+    tactics: {
+      formation: "4-3-3",
+      playStyle: "Possession",
+      attackingStyle: "Short Passing",
+      defensiveStyle: "High Press"
+    },
+    players: [
+      { name: "Aaron Ramsdale", position: "GK", nationality: "ENG", age: 25, rating: 79, goalProb: 0.01 },
+      { name: "William Saliba", position: "CB", nationality: "FRA", age: 22, rating: 81, goalProb: 0.04 },
+      { name: "Gabriel", position: "CB", nationality: "BRA", age: 26, rating: 80, goalProb: 0.05 },
+      { name: "Ben White", position: "RB", nationality: "ENG", age: 26, rating: 78, goalProb: 0.03 },
+      { name: "Oleksandr Zinchenko", position: "LB", nationality: "UKR", age: 27, rating: 77, goalProb: 0.04 },
+      { name: "Declan Rice", position: "CDM", nationality: "ENG", age: 25, rating: 83, goalProb: 0.06 },
+      { name: "Martin Ødegaard", position: "CM", nationality: "NOR", age: 24, rating: 85, goalProb: 0.18 },
+      { name: "Bukayo Saka", position: "RW", nationality: "ENG", age: 22, rating: 84, goalProb: 0.22 },
+      { name: "Leandro Trossard", position: "LW", nationality: "BEL", age: 29, rating: 79, goalProb: 0.15 },
+      { name: "Kai Havertz", position: "ST", nationality: "GER", age: 24, rating: 80, goalProb: 0.24 },
+      { name: "Gabriel Jesus", position: "ST", nationality: "BRA", age: 26, rating: 81, goalProb: 0.26 }
+    ]
+  },
+  "Aston Villa": {
+    name: "Aston Villa",
+    shortName: "AVL",
+    founded: 1874,
+    stadium: "Villa Park",
+    capacity: 42682,
+    manager: "Unai Emery",
+    colors: { primary: "#95B711", secondary: "#FFFFFF", accent: "#C8102E" },
+    teamStats: {
+      avgGoalsFor: 1.8,
+      avgGoalsAgainst: 1.3,
+      avgCorners: 5.4,
+      avgCards: 2.0,
+      homeStrength: 75,
+      awayStrength: 68
+    },
+    tactics: {
+      formation: "4-2-3-1",
+      playStyle: "Counter Attack",
+      attackingStyle: "Direct Play",
+      defensiveStyle: "Mid Block"
+    },
+    players: [
+      { name: "Emiliano Martínez", position: "GK", nationality: "ARG", age: 31, rating: 80, goalProb: 0.01 },
+      { name: "Matthew Cash", position: "RB", nationality: "ENG", age: 26, rating: 77, goalProb: 0.03 },
+      { name: "Ezri Konsa", position: "CB", nationality: "ENG", age: 26, rating: 76, goalProb: 0.04 },
+      { name: "Pau Torres", position: "CB", nationality: "ESP", age: 27, rating: 78, goalProb: 0.05 },
+      { name: "Lucas Digne", position: "LB", nationality: "FRA", age: 30, rating: 77, goalProb: 0.04 },
+      { name: "Douglas Luiz", position: "CM", nationality: "BRA", age: 25, rating: 79, goalProb: 0.12 },
+      { name: "Boubacar Kamara", position: "CDM", nationality: "FRA", age: 24, rating: 77, goalProb: 0.05 },
+      { name: "Leon Bailey", position: "RW", nationality: "JAM", age: 26, rating: 76, goalProb: 0.16 },
+      { name: "Ollie Watkins", position: "ST", nationality: "ENG", age: 28, rating: 80, goalProb: 0.28 },
+      { name: "Emiliano Buendía", position: "CAM", nationality: "ARG", age: 27, rating: 76, goalProb: 0.14 },
+      { name: "Morgan Rogers", position: "LW", nationality: "ENG", age: 21, rating: 74, goalProb: 0.10 }
+    ]
+  },
+  "Bournemouth": {
+    name: "AFC Bournemouth",
+    shortName: "BOU",
+    founded: 1899,
+    stadium: "Vitality Stadium",
+    capacity: 11364,
+    manager: "Andoni Iraola",
+    colors: { primary: "#DA291C", secondary: "#FFFFFF", accent: "#000000" },
+    teamStats: {
+      avgGoalsFor: 1.3,
+      avgGoalsAgainst: 1.7,
+      avgCorners: 4.8,
+      avgCards: 2.3,
+      homeStrength: 65,
+      awayStrength: 60
+    },
+    tactics: {
+      formation: "4-2-3-1",
+      playStyle: "Counter Attack",
+      attackingStyle: "Wing Play",
+      defensiveStyle: "Low Block"
+    },
+    players: [
+      { name: "Neto", position: "GK", nationality: "BRA", age: 34, rating: 73, goalProb: 0.01 },
+      { name: "Adam Smith", position: "RB", nationality: "ENG", age: 32, rating: 72, goalProb: 0.02 },
+      { name: "Marc Guéhi", position: "CB", nationality: "ENG", age: 23, rating: 75, goalProb: 0.04 },
+      { name: "Lloyd Kelly", position: "CB", nationality: "ENG", age: 25, rating: 74, goalProb: 0.05 },
+      { name: "Milos Kerkez", position: "LB", nationality: "HUN", age: 21, rating: 73, goalProb: 0.03 },
+      { name: "Lewis Cook", position: "CDM", nationality: "ENG", age: 26, rating: 75, goalProb: 0.06 },
+      { name: "Philip Billing", position: "CM", nationality: "DEN", age: 27, rating: 74, goalProb: 0.08 },
+      { name: "Marcus Tavernier", position: "RW", nationality: "ENG", age: 24, rating: 76, goalProb: 0.15 },
+      { name: "Dominic Solanke", position: "ST", nationality: "ENG", age: 26, rating: 77, goalProb: 0.24 },
+      { name: "Justin Kluivert", position: "LW", nationality: "NED", age: 25, rating: 75, goalProb: 0.18 },
+      { name: "Ryan Christie", position: "CAM", nationality: "SCO", age: 29, rating: 75, goalProb: 0.12 }
+    ]
+  },
+  "Brentford": {
+    name: "Brentford",
+    shortName: "BRE",
+    founded: 1889,
+    stadium: "Gtech Community Stadium",
+    capacity: 17250,
+    manager: "Thomas Frank",
+    colors: { primary: "#E30613", secondary: "#FFFFFF", accent: "#000000" },
+    teamStats: {
+      avgGoalsFor: 1.6,
+      avgGoalsAgainst: 1.4,
+      avgCorners: 5.0,
+      avgCards: 2.1,
+      homeStrength: 70,
+      awayStrength: 67
+    },
+    tactics: {
+      formation: "3-5-2",
+      playStyle: "Pressing",
+      attackingStyle: "Wing Backs",
+      defensiveStyle: "High Line"
+    },
+    players: [
+      { name: "David Raya", position: "GK", nationality: "ESP", age: 28, rating: 78, goalProb: 0.01 },
+      { name: "Sergi Canós", position: "RW", nationality: "ESP", age: 26, rating: 75, goalProb: 0.16 },
+      { name: "Pontus Jansson", position: "CB", nationality: "SWE", age: 32, rating: 74, goalProb: 0.05 },
+      { name: "Ben Mee", position: "CB", nationality: "ENG", age: 34, rating: 73, goalProb: 0.04 },
+      { name: "Kristoffer Ajer", position: "CB", nationality: "NOR", age: 25, rating: 75, goalProb: 0.06 },
+      { name: "Christian Nørgaard", position: "CDM", nationality: "DEN", age: 30, rating: 77, goalProb: 0.07 },
+      { name: "Mathias Jensen", position: "CM", nationality: "DEN", age: 27, rating: 76, goalProb: 0.09 },
+      { name: "Yoane Wissa", position: "LW", nationality: "COD", age: 27, rating: 76, goalProb: 0.17 },
+      { name: "Ivan Toney", position: "ST", nationality: "ENG", age: 27, rating: 80, goalProb: 0.30 },
+      { name: "Kevin Schade", position: "ST", nationality: "GER", age: 22, rating: 75, goalProb: 0.20 },
+      { name: "Josh Dasilva", position: "CAM", nationality: "ENG", age: 25, rating: 75, goalProb: 0.10 }
+    ]
+  },
+  "Brighton & Hove Albion": {
+    name: "Brighton & Hove Albion",
+    shortName: "BHA",
+    founded: 1901,
+    stadium: "Amex Stadium",
+    capacity: 31876,
+    manager: "Roberto De Zerbi",
+    colors: { primary: "#003DA5", secondary: "#FFFFFF", accent: "#ED2124" },
+    teamStats: {
+      avgGoalsFor: 1.7,
+      avgGoalsAgainst: 1.2,
+      avgCorners: 5.6,
+      avgCards: 1.9,
+      homeStrength: 72,
+      awayStrength: 70
+    },
+    tactics: {
+      formation: "4-2-3-1",
+      playStyle: "Possession",
+      attackingStyle: "Short Passing",
+      defensiveStyle: "High Press"
+    },
+    players: [
+      { name: "Jason Steele", position: "GK", nationality: "ENG", age: 33, rating: 74, goalProb: 0.01 },
+      { name: "Tariq Lamptey", position: "RB", nationality: "GHA", age: 23, rating: 76, goalProb: 0.03 },
+      { name: "Lewis Dunk", position: "CB", nationality: "ENG", age: 32, rating: 77, goalProb: 0.05 },
+      { name: "Joël Veltman", position: "CB", nationality: "NED", age: 31, rating: 75, goalProb: 0.04 },
+      { name: "Pervis Estupiñán", position: "LB", nationality: "ECU", age: 25, rating: 77, goalProb: 0.06 },
+      { name: "Moisés Caicedo", position: "CDM", nationality: "ECU", age: 22, rating: 80, goalProb: 0.07 },
+      { name: "Alexis Mac Allister", position: "CM", nationality: "ARG", age: 25, rating: 79, goalProb: 0.14 },
+      { name: "Adam Lallana", position: "CAM", nationality: "ENG", age: 35, rating: 76, goalProb: 0.12 },
+      { name: "Kaoru Mitoma", position: "LW", nationality: "JPN", age: 26, rating: 78, goalProb: 0.18 },
+      { name: "Deniz Undav", position: "ST", nationality: "GER", age: 27, rating: 76, goalProb: 0.22 },
+      { name: "Evan Ferguson", position: "ST", nationality: "IRL", age: 19, rating: 73, goalProb: 0.20 }
+    ]
+  },
+  "Chelsea": {
+    name: "Chelsea",
+    shortName: "CHE",
+    founded: 1905,
+    stadium: "Stamford Bridge",
+    capacity: 40341,
+    manager: "Mauricio Pochettino",
+    colors: { primary: "#034694", secondary: "#FFFFFF", accent: "#DBA51D" },
+    teamStats: {
+      avgGoalsFor: 1.9,
+      avgGoalsAgainst: 1.1,
+      avgCorners: 6.0,
+      avgCards: 2.0,
+      homeStrength: 78,
+      awayStrength: 72
+    },
+    tactics: {
+      formation: "4-3-3",
+      playStyle: "Possession",
+      attackingStyle: "Short Passing",
+      defensiveStyle: "Mid Block"
+    },
+    players: [
+      { name: "Robert Sánchez", position: "GK", nationality: "ESP", age: 26, rating: 75, goalProb: 0.01 },
+      { name: "Marc Cucurella", position: "LB", nationality: "ESP", age: 25, rating: 77, goalProb: 0.05 },
+      { name: "Thiago Silva", position: "CB", nationality: "BRA", age: 39, rating: 78, goalProb: 0.06 },
+      { name: "Wesley Fofana", position: "CB", nationality: "FRA", age: 22, rating: 79, goalProb: 0.04 },
+      { name: "Reece James", position: "RB", nationality: "ENG", age: 23, rating: 80, goalProb: 0.08 },
+      { name: "Enzo Fernández", position: "CM", nationality: "ARG", age: 22, rating: 80, goalProb: 0.12 },
+      { name: "Moisés Caicedo", position: "CDM", nationality: "ECU", age: 22, rating: 80, goalProb: 0.07 },
+      { name: "Cole Palmer", position: "CAM", nationality: "ENG", age: 21, rating: 79, goalProb: 0.20 },
+      { name: "Raheem Sterling", position: "RW", nationality: "ENG", age: 28, rating: 78, goalProb: 0.18 },
+      { name: "Mykhailo Mudryk", position: "LW", nationality: "UKR", age: 22, rating: 76, goalProb: 0.16 },
+      { name: "Nikola Žigić", position: "ST", nationality: "SRB", age: 25, rating: 77, goalProb: 0.25 }
+    ]
+  },
+  "Crystal Palace": {
+    name: "Crystal Palace",
+    shortName: "CRY",
+    founded: 1905,
+    stadium: "Selhurst Park",
+    capacity: 25486,
+    manager: "Roy Hodgson",
+    colors: { primary: "#1B458F", secondary: "#FFFFFF", accent: "#C4122E" },
+    teamStats: {
+      avgGoalsFor: 1.4,
+      avgGoalsAgainst: 1.5,
+      avgCorners: 4.9,
+      avgCards: 2.2,
+      homeStrength: 68,
+      awayStrength: 64
+    },
+    tactics: {
+      formation: "4-2-3-1",
+      playStyle: "Counter Attack",
+      attackingStyle: "Direct Play",
+      defensiveStyle: "Low Block"
+    },
+    players: [
+      { name: "Sam Johnstone", position: "GK", nationality: "ENG", age: 30, rating: 74, goalProb: 0.01 },
+      { name: "Joachim Andersen", position: "CB", nationality: "DEN", age: 27, rating: 76, goalProb: 0.06 },
+      { name: "Marc Guéhi", position: "CB", nationality: "ENG", age: 23, rating: 75, goalProb: 0.04 },
+      { name: "Nathaniel Clyne", position: "RB", nationality: "ENG", age: 32, rating: 73, goalProb: 0.03 },
+      { name: "Tyrick Mitchell", position: "LB", nationality: "ENG", age: 24, rating: 75, goalProb: 0.05 },
+      { name: "Cheick Doucouré", position: "CDM", nationality: "MLI", age: 28, rating: 77, goalProb: 0.08 },
+      { name: "Adam Wharton", position: "CM", nationality: "ENG", age: 19, rating: 74, goalProb: 0.06 },
+      { name: "Michael Olise", position: "CAM", nationality: "FRA", age: 21, rating: 79, goalProb: 0.18 },
+      { name: "Jefferson Lerma", position: "CDM", nationality: "COL", age: 29, rating: 75, goalProb: 0.07 },
+      { name: "Jean-Philippe Mateta", position: "ST", nationality: "FRA", age: 26, rating: 76, goalProb: 0.24 },
+      { name: "Jordan Ayew", position: "RW", nationality: "GHA", age: 32, rating: 74, goalProb: 0.15 }
+    ]
+  },
+  "Everton": {
+    name: "Everton",
+    shortName: "EVE",
+    founded: 1878,
+    stadium: "Goodison Park",
+    capacity: 39414,
+    manager: "Sean Dyche",
+    colors: { primary: "#003399", secondary: "#FFFFFF", accent: "#FBEA1C" },
+    teamStats: {
+      avgGoalsFor: 1.2,
+      avgGoalsAgainst: 1.6,
+      avgCorners: 4.7,
+      avgCards: 2.4,
+      homeStrength: 66,
+      awayStrength: 62
+    },
+    tactics: {
+      formation: "4-4-2",
+      playStyle: "Defensive",
+      attackingStyle: "Long Balls",
+      defensiveStyle: "Low Block"
+    },
+    players: [
+      { name: "Jordan Pickford", position: "GK", nationality: "ENG", age: 29, rating: 78, goalProb: 0.01 },
+      { name: "Seamus Coleman", position: "RB", nationality: "IRL", age: 35, rating: 73, goalProb: 0.02 },
+      { name: "James Tarkowski", position: "CB", nationality: "ENG", age: 31, rating: 75, goalProb: 0.06 },
+      { name: "Ben Godfrey", position: "CB", nationality: "ENG", age: 25, rating: 74, goalProb: 0.05 },
+      { name: "Vitaly Mykolenko", position: "LB", nationality: "UKR", age: 24, rating: 74, goalProb: 0.04 },
+      { name: "Abdoulaye Doucouré", position: "CM", nationality: "MLI", age: 30, rating: 76, goalProb: 0.09 },
+      { name: "Amadou Onana", position: "CDM", nationality: "BEL", age: 22, rating: 77, goalProb: 0.08 },
+      { name: "Iñigo Martínez", position: "CB", nationality: "ESP", age: 32, rating: 76, goalProb: 0.05 },
+      { name: "Arnaut Danjuma", position: "LW", nationality: "NED", age: 26, rating: 75, goalProb: 0.17 },
+      { name: "Anthony Gordon", position: "RW", nationality: "ENG", age: 22, rating: 77, goalProb: 0.19 },
+      { name: "Carlos Alcaraz", position: "ST", nationality: "URU", age: 20, rating: 73, goalProb: 0.20 }
+    ]
+  },
+  "Fulham": {
+    name: "Fulham",
+    shortName: "FUL",
+    founded: 1879,
+    stadium: "Craven Cottage",
+    capacity: 25711,
+    manager: "Marco Silva",
+    colors: { primary: "#000000", secondary: "#FFFFFF", accent: "#CC0000" },
+    teamStats: {
+      avgGoalsFor: 1.5,
+      avgGoalsAgainst: 1.4,
+      avgCorners: 5.1,
+      avgCards: 2.1,
+      homeStrength: 70,
+      awayStrength: 66
+    },
+    tactics: {
+      formation: "4-2-3-1",
+      playStyle: "Counter Attack",
+      attackingStyle: "Wing Play",
+      defensiveStyle: "Mid Block"
+    },
+    players: [
+      { name: "Bernd Leno", position: "GK", nationality: "GER", age: 31, rating: 75, goalProb: 0.01 },
+      { name: "Kenny Tete", position: "RB", nationality: "NED", age: 28, rating: 74, goalProb: 0.03 },
+      { name: "Issa Diop", position: "CB", nationality: "FRA", age: 27, rating: 76, goalProb: 0.05 },
+      { name: "Tim Ream", position: "CB", nationality: "USA", age: 36, rating: 73, goalProb: 0.04 },
+      { name: "Antonee Robinson", position: "LB", nationality: "USA", age: 26, rating: 75, goalProb: 0.06 },
+      { name: "João Palhinha", position: "CDM", nationality: "POR", age: 28, rating: 79, goalProb: 0.07 },
+      { name: "Tom Cairney", position: "CM", nationality: "SCO", age: 32, rating: 76, goalProb: 0.10 },
+      { name: "Harry Wilson", position: "RW", nationality: "WAL", age: 26, rating: 77, goalProb: 0.18 },
+      { name: "Willian", position: "LW", nationality: "BRA", age: 35, rating: 74, goalProb: 0.14 },
+      { name: "Raúl Jiménez", position: "ST", nationality: "MEX", age: 32, rating: 76, goalProb: 0.22 },
+      { name: "Aleksandar Mitrović", position: "ST", nationality: "SRB", age: 29, rating: 78, goalProb: 0.30 }
+    ]
+  },
+  "Liverpool": {
+    name: "Liverpool",
+    shortName: "LIV",
+    founded: 1892,
+    stadium: "Anfield",
+    capacity: 53394,
+    manager: "Jürgen Klopp",
+    colors: { primary: "#C8102E", secondary: "#FFFFFF", accent: "#00A650" },
+    teamStats: {
+      avgGoalsFor: 2.4,
+      avgGoalsAgainst: 0.9,
+      avgCorners: 6.2,
+      avgCards: 1.9,
+      homeStrength: 85,
+      awayStrength: 76
+    },
+    tactics: {
+      formation: "4-3-3",
+      playStyle: "Gegenpress",
+      attackingStyle: "High Tempo",
+      defensiveStyle: "High Press"
+    },
+    players: [
+      { name: "Alisson", position: "GK", nationality: "BRA", age: 31, rating: 82, goalProb: 0.01 },
+      { name: "Trent Alexander-Arnold", position: "RB", nationality: "ENG", age: 25, rating: 85, goalProb: 0.09 },
+      { name: "Virgil van Dijk", position: "CB", nationality: "NED", age: 32, rating: 83, goalProb: 0.07 },
+      { name: "Ibrahima Konaté", position: "CB", nationality: "FRA", age: 24, rating: 78, goalProb: 0.05 },
+      { name: "Andrew Robertson", position: "LB", nationality: "SCO", age: 29, rating: 80, goalProb: 0.06 },
+      { name: "Fabinho", position: "CDM", nationality: "BRA", age: 30, rating: 79, goalProb: 0.08 },
+      { name: "Thiago Alcântara", position: "CM", nationality: "ESP", age: 32, rating: 81, goalProb: 0.12 },
+      { name: "Mohamed Salah", position: "RW", nationality: "EGY", age: 31, rating: 88, goalProb: 0.32 },
+      { name: "Darwin Núñez", position: "ST", nationality: "URU", age: 24, rating: 79, goalProb: 0.26 },
+      { name: "Luis Díaz", position: "LW", nationality: "COL", age: 26, rating: 80, goalProb: 0.20 },
+      { name: "Cody Gakpo", position: "LW", nationality: "NED", age: 24, rating: 77, goalProb: 0.18 }
+    ]
+  },
+  "Manchester City": {
+    name: "Manchester City",
+    shortName: "MCI",
+    founded: 1880,
+    stadium: "Etihad Stadium",
+    capacity: 53400,
+    manager: "Pep Guardiola",
+    colors: { primary: "#6CABDD", secondary: "#FFFFFF", accent: "#002147" },
+    teamStats: {
+      avgGoalsFor: 2.6,
+      avgGoalsAgainst: 0.7,
+      avgCorners: 6.8,
+      avgCards: 1.6,
+      homeStrength: 90,
+      awayStrength: 82
+    },
+    tactics: {
+      formation: "4-3-3",
+      playStyle: "Possession",
+      attackingStyle: "Short Passing",
+      defensiveStyle: "High Press"
+    },
+    players: [
+      { name: "Ederson", position: "GK", nationality: "BRA", age: 30, rating: 81, goalProb: 0.01 },
+      { name: "Kyle Walker", position: "RB", nationality: "ENG", age: 33, rating: 80, goalProb: 0.03 },
+      { name: "Rúben Dias", position: "CB", nationality: "POR", age: 26, rating: 82, goalProb: 0.06 },
+      { name: "Manuel Akanji", position: "CB", nationality: "SUI", age: 28, rating: 78, goalProb: 0.05 },
+      { name: "Nathan Aké", position: "LB", nationality: "NED", age: 28, rating: 77, goalProb: 0.04 },
+      { name: "Rodri", position: "CDM", nationality: "ESP", age: 27, rating: 85, goalProb: 0.08 },
+      { name: "Kevin De Bruyne", position: "CM", nationality: "BEL", age: 32, rating: 87, goalProb: 0.18 },
+      { name: "Bernardo Silva", position: "CM", nationality: "POR", age: 29, rating: 83, goalProb: 0.15 },
+      { name: "Erling Haaland", position: "ST", nationality: "NOR", age: 23, rating: 90, goalProb: 0.38 },
+      { name: "Phil Foden", position: "CAM", nationality: "ENG", age: 23, rating: 84, goalProb: 0.22 },
+      { name: "Julián Álvarez", position: "ST", nationality: "ARG", age: 23, rating: 79, goalProb: 0.24 }
+    ]
+  },
+  "Manchester United": {
+    name: "Manchester United",
+    shortName: "MUN",
+    founded: 1878,
+    stadium: "Old Trafford",
+    capacity: 74310,
+    manager: "Erik ten Hag",
+    colors: { primary: "#DA291C", secondary: "#FFFFFF", accent: "#000000" },
+    teamStats: {
+      avgGoalsFor: 1.8,
+      avgGoalsAgainst: 1.3,
+      avgCorners: 5.7,
+      avgCards: 2.0,
+      homeStrength: 77,
+      awayStrength: 71
+    },
+    tactics: {
+      formation: "4-2-3-1",
+      playStyle: "Counter Attack",
+      attackingStyle: "Wing Play",
+      defensiveStyle: "Mid Block"
+    },
+    players: [
+      { name: "André Onana", position: "GK", nationality: "CMR", age: 27, rating: 77, goalProb: 0.01 },
+      { name: "Aaron Wan-Bissaka", position: "RB", nationality: "ENG", age: 26, rating: 76, goalProb: 0.03 },
+      { name: "Harry Maguire", position: "CB", nationality: "ENG", age: 30, rating: 74, goalProb: 0.05 },
+      { name: "Raphaël Varane", position: "CB", nationality: "FRA", age: 30, rating: 78, goalProb: 0.06 },
+      { name: "Luke Shaw", position: "LB", nationality: "ENG", age: 28, rating: 77, goalProb: 0.04 },
+      { name: "Casemiro", position: "CDM", nationality: "BRA", age: 31, rating: 80, goalProb: 0.08 },
+      { name: "Bruno Fernandes", position: "CM", nationality: "POR", age: 29, rating: 83, goalProb: 0.20 },
+      { name: "Christian Eriksen", position: "CM", nationality: "DEN", age: 31, rating: 78, goalProb: 0.12 },
+      { name: "Marcus Rashford", position: "LW", nationality: "ENG", age: 26, rating: 80, goalProb: 0.24 },
+      { name: "Antony", position: "RW", nationality: "BRA", age: 23, rating: 76, goalProb: 0.16 },
+      { name: "Rasmus Højlund", position: "ST", nationality: "DEN", age: 20, rating: 75, goalProb: 0.22 }
+    ]
+  },
+  "Newcastle United": {
+    name: "Newcastle United",
+    shortName: "NEW",
+    founded: 1892,
+    stadium: "St James' Park",
+    capacity: 52305,
+    manager: "Eddie Howe",
+    colors: { primary: "#000000", secondary: "#FFFFFF", accent: "#FF0000" },
+    teamStats: {
+      avgGoalsFor: 1.7,
+      avgGoalsAgainst: 1.1,
+      avgCorners: 5.5,
+      avgCards: 2.2,
+      homeStrength: 76,
+      awayStrength: 70
+    },
+    tactics: {
+      formation: "4-3-3",
+      playStyle: "Pressing",
+      attackingStyle: "Wing Play",
+      defensiveStyle: "High Press"
+    },
+    players: [
+      { name: "Nick Pope", position: "GK", nationality: "ENG", age: 31, rating: 78, goalProb: 0.01 },
+      { name: "Kieran Trippier", position: "RB", nationality: "ENG", age: 33, rating: 79, goalProb: 0.04 },
+      { name: "Fabian Schär", position: "CB", nationality: "SUI", age: 32, rating: 77, goalProb: 0.07 },
+      { name: "Sven Botman", position: "CB", nationality: "NED", age: 23, rating: 76, goalProb: 0.05 },
+      { name: "Dan Burn", position: "LB", nationality: "ENG", age: 31, rating: 74, goalProb: 0.04 },
+      { name: "Bruno Guimarães", position: "CDM", nationality: "BRA", age: 26, rating: 80, goalProb: 0.09 },
+      { name: "Joe Willock", position: "CM", nationality: "ENG", age: 24, rating: 76, goalProb: 0.10 },
+      { name: "Alexander Isak", position: "ST", nationality: "SWE", age: 24, rating: 81, goalProb: 0.30 },
+      { name: "Jacob Murphy", position: "RW", nationality: "ENG", age: 28, rating: 75, goalProb: 0.14 },
+      { name: "Allan Saint-Maximin", position: "LW", nationality: "FRA", age: 27, rating: 77, goalProb: 0.18 },
+      { name: "Anthony Gordon", position: "LW", nationality: "ENG", age: 22, rating: 77, goalProb: 0.19 }
+    ]
+  },
+  "Nottingham Forest": {
+    name: "Nottingham Forest",
+    shortName: "NFO",
+    founded: 1865,
+    stadium: "City Ground",
+    capacity: 30445,
+    manager: "Steve Cooper",
+    colors: { primary: "#E5222A", secondary: "#FFFFFF", accent: "#000000" },
+    teamStats: {
+      avgGoalsFor: 1.1,
+      avgGoalsAgainst: 1.8,
+      avgCorners: 4.5,
+      avgCards: 2.5,
+      homeStrength: 63,
+      awayStrength: 58
+    },
+    tactics: {
+      formation: "4-4-2",
+      playStyle: "Defensive",
+      attackingStyle: "Long Balls",
+      defensiveStyle: "Low Block"
+    },
+    players: [
+      { name: "Dean Henderson", position: "GK", nationality: "ENG", age: 26, rating: 75, goalProb: 0.01 },
+      { name: "Willy Boly", position: "CB", nationality: "FRA", age: 32, rating: 74, goalProb: 0.05 },
+      { name: "Murillo", position: "CB", nationality: "BRA", age: 23, rating: 73, goalProb: 0.04 },
+      { name: "Neco Williams", position: "RB", nationality: "WAL", age: 22, rating: 74, goalProb: 0.03 },
+      { name: "Renan Lodi", position: "LB", nationality: "BRA", age: 25, rating: 75, goalProb: 0.04 },
+      { name: "Cheikhou Kouyaté", position: "CDM", nationality: "SEN", age: 33, rating: 75, goalProb: 0.06 },
+      { name: "Ryan Yates", position: "CM", nationality: "ENG", age: 25, rating: 73, goalProb: 0.07 },
+      { name: "James Garner", position: "CM", nationality: "ENG", age: 22, rating: 74, goalProb: 0.08 },
+      { name: "Taiwo Awoniyi", position: "ST", nationality: "NGR", age: 26, rating: 75, goalProb: 0.22 },
+      { name: "Callum Hudson-Odoi", position: "RW", nationality: "ENG", age: 23, rating: 74, goalProb: 0.16 },
+      { name: "Brennan Johnson", position: "LW", nationality: "WAL", age: 22, rating: 76, goalProb: 0.19 }
+    ]
+  },
+  "Tottenham Hotspur": {
+    name: "Tottenham Hotspur",
+    shortName: "TOT",
+    founded: 1882,
+    stadium: "Tottenham Hotspur Stadium",
+    capacity: 62850,
+    manager: "Ange Postecoglou",
+    colors: { primary: "#132257", secondary: "#FFFFFF", accent: "#C8102E" },
+    teamStats: {
+      avgGoalsFor: 2.0,
+      avgGoalsAgainst: 1.2,
+      avgCorners: 5.8,
+      avgCards: 1.9,
+      homeStrength: 79,
+      awayStrength: 72
+    },
+    tactics: {
+      formation: "4-3-3",
+      playStyle: "Attacking",
+      attackingStyle: "High Tempo",
+      defensiveStyle: "High Press"
+    },
+    players: [
+      { name: "Guglielmo Vicario", position: "GK", nationality: "ITA", age: 27, rating: 76, goalProb: 0.01 },
+      { name: "Yves Bissouma", position: "CDM", nationality: "MLI", age: 27, rating: 78, goalProb: 0.07 },
+      { name: "Cristian Romero", position: "CB", nationality: "ARG", age: 25, rating: 80, goalProb: 0.06 },
+      { name: "Eric Dier", position: "CB", nationality: "ENG", age: 29, rating: 75, goalProb: 0.05 },
+      { name: "Ivan Perišić", position: "LB", nationality: "CRO", age: 34, rating: 76, goalProb: 0.04 },
+      { name: "James Maddison", position: "CAM", nationality: "ENG", age: 27, rating: 81, goalProb: 0.18 },
+      { name: "Pierre-Emile Højbjerg", position: "CM", nationality: "DEN", age: 28, rating: 77, goalProb: 0.09 },
+      { name: "Heung-Min Son", position: "RW", nationality: "KOR", age: 31, rating: 84, goalProb: 0.28 },
+      { name: "Richarlison", position: "ST", nationality: "BRA", age: 26, rating: 78, goalProb: 0.24 },
+      { name: "Dejan Kulusevski", position: "LW", nationality: "SWE", age: 23, rating: 77, goalProb: 0.16 },
+      { name: "Djed Spence", position: "RB", nationality: "ENG", age: 23, rating: 75, goalProb: 0.03 }
+    ]
+  },
+  "West Ham United": {
+    name: "West Ham United",
+    shortName: "WHU",
+    founded: 1895,
+    stadium: "London Stadium",
+    capacity: 62500,
+    manager: "David Moyes",
+    colors: { primary: "#7A263A", secondary: "#FFFFFF", accent: "#1BB1E7" },
+    teamStats: {
+      avgGoalsFor: 1.6,
+      avgGoalsAgainst: 1.4,
+      avgCorners: 5.3,
+      avgCards: 2.1,
+      homeStrength: 71,
+      awayStrength: 67
+    },
+    tactics: {
+      formation: "4-2-3-1",
+      playStyle: "Counter Attack",
+      attackingStyle: "Direct Play",
+      defensiveStyle: "Mid Block"
+    },
+    players: [
+      { name: "Łukasz Fabiański", position: "GK", nationality: "POL", age: 38, rating: 74, goalProb: 0.01 },
+      { name: "Vladimír Coufal", position: "RB", nationality: "CZE", age: 31, rating: 75, goalProb: 0.03 },
+      { name: "Angelo Ogbonna", position: "CB", nationality: "ITA", age: 35, rating: 74, goalProb: 0.05 },
+      { name: "Kurt Zouma", position: "CB", nationality: "FRA", age: 29, rating: 76, goalProb: 0.06 },
+      { name: "Aaron Cresswell", position: "LB", nationality: "ENG", age: 34, rating: 73, goalProb: 0.04 },
+      { name: "Declan Rice", position: "CDM", nationality: "ENG", age: 25, rating: 82, goalProb: 0.06 },
+      { name: "Tomas Souček", position: "CM", nationality: "CZE", age: 28, rating: 78, goalProb: 0.12 },
+      { name: "Nayef Aguerd", position: "CB", nationality: "MAR", age: 27, rating: 75, goalProb: 0.05 },
+      { name: "Jarrod Bowen", position: "RW", nationality: "ENG", age: 27, rating: 78, goalProb: 0.22 },
+      { name: "Lucas Paquetá", position: "CAM", nationality: "BRA", age: 26, rating: 79, goalProb: 0.15 },
+      { name: "Michail Antonio", position: "ST", nationality: "ENG", age: 33, rating: 76, goalProb: 0.20 }
+    ]
+  },
+  "Wolverhampton Wanderers": {
+    name: "Wolverhampton Wanderers",
+    shortName: "WOL",
+    founded: 1877,
+    stadium: "Molineux Stadium",
+    capacity: 32050,
+    manager: "Gary O'Neil",
+    colors: { primary: "#FDB913", secondary: "#000000", accent: "#FFFFFF" },
+    teamStats: {
+      avgGoalsFor: 1.4,
+      avgGoalsAgainst: 1.5,
+      avgCorners: 5.0,
+      avgCards: 2.3,
+      homeStrength: 69,
+      awayStrength: 65
+    },
+    tactics: {
+      formation: "3-4-3",
+      playStyle: "Counter Attack",
+      attackingStyle: "Wing Backs",
+      defensiveStyle: "Low Block"
+    },
+    players: [
+      { name: "José Sá", position: "GK", nationality: "POR", age: 30, rating: 77, goalProb: 0.01 },
+      { name: "Nelson Semedo", position: "RB", nationality: "POR", age: 30, rating: 76, goalProb: 0.03 },
+      { name: "Maximilian Kilman", position: "CB", nationality: "ENG", age: 26, rating: 75, goalProb: 0.05 },
+      { name: "Toti", position: "CB", nationality: "ESP", age: 27, rating: 74, goalProb: 0.04 },
+      { name: "Jonny", position: "LB", nationality: "ESP", age: 29, rating: 74, goalProb: 0.04 },
+      { name: "Mario Lemina", position: "CDM", nationality: "GAB", age: 29, rating: 76, goalProb: 0.08 },
+      { name: "Rayan Aït-Nouri", position: "LB", nationality: "ALG", age: 22, rating: 75, goalProb: 0.05 },
+      { name: "Matheus Nunes", position: "CM", nationality: "POR", age: 25, rating: 77, goalProb: 0.09 },
+      { name: "Pedro Neto", position: "RW", nationality: "POR", age: 23, rating: 78, goalProb: 0.19 },
+      { name: "Hwang Hee-Chan", position: "ST", nationality: "KOR", age: 27, rating: 76, goalProb: 0.20 },
+      { name: "Sasa Kalajdzic", position: "ST", nationality: "AUT", age: 26, rating: 75, goalProb: 0.22 }
+    ]
+  },
+  "Sheffield United": {
+    name: "Sheffield United",
+    shortName: "SHU",
+    founded: 1889,
+    stadium: "Bramall Lane",
+    capacity: 32050,
+    manager: "Chris Wilder",
+    colors: { primary: "#EE2737", secondary: "#FFFFFF", accent: "#000000" },
+    teamStats: {
+      avgGoalsFor: 1.0,
+      avgGoalsAgainst: 2.0,
+      avgCorners: 4.3,
+      avgCards: 2.6,
+      homeStrength: 60,
+      awayStrength: 55
+    },
+    tactics: {
+      formation: "3-5-2",
+      playStyle: "Defensive",
+      attackingStyle: "Long Balls",
+      defensiveStyle: "Low Block"
+    },
+    players: [
+      { name: "Wes Foderingham", position: "GK", nationality: "ENG", age: 32, rating: 73, goalProb: 0.01 },
+      { name: "George Baldock", position: "RB", nationality: "ENG", age: 30, rating: 72, goalProb: 0.03 },
+      { name: "John Egan", position: "CB", nationality: "IRL", age: 31, rating: 74, goalProb: 0.06 },
+      { name: "Anel Ahmedhodžić", position: "CB", nationality: "BIH", age: 24, rating: 73, goalProb: 0.05 },
+      { name: "James Trafford", position: "LB", nationality: "ENG", age: 21, rating: 72, goalProb: 0.02 },
+      { name: "Oli McBurnie", position: "ST", nationality: "SCO", age: 27, rating: 74, goalProb: 0.22 },
+      { name: "Iliman Ndiaye", position: "LW", nationality: "FRA", age: 23, rating: 75, goalProb: 0.18 },
+      { name: "Ben Brereton Díaz", position: "ST", nationality: "CHI", age: 24, rating: 75, goalProb: 0.24 },
+      { name: "John Fleck", position: "CM", nationality: "SCO", age: 32, rating: 74, goalProb: 0.09 },
+      { name: "Sander Berge", position: "CDM", nationality: "NOR", age: 25, rating: 76, goalProb: 0.07 },
+      { name: "Morgan Gibbs-White", position: "CAM", nationality: "ENG", age: 23, rating: 75, goalProb: 0.14 }
+    ]
+  },
+  "Luton Town": {
+    name: "Luton Town",
+    shortName: "LUT",
+    founded: 1885,
+    stadium: "Kenilworth Road",
+    capacity: 10356,
+    manager: "Rob Edwards",
+    colors: { primary: "#FFCC00", secondary: "#000000", accent: "#FFFFFF" },
+    teamStats: {
+      avgGoalsFor: 1.1,
+      avgGoalsAgainst: 1.9,
+      avgCorners: 4.4,
+      avgCards: 2.4,
+      homeStrength: 62,
+      awayStrength: 57
+    },
+    tactics: {
+      formation: "4-2-3-1",
+      playStyle: "Counter Attack",
+      attackingStyle: "Direct Play",
+      defensiveStyle: "Low Block"
+    },
+    players: [
+      { name: "Thomas Kaminski", position: "GK", nationality: "BEL", age: 31, rating: 73, goalProb: 0.01 },
+      { name: "Derrick Cornelson", position: "RB", nationality: "ENG", age: 28, rating: 72, goalProb: 0.03 },
+      { name: "Tom Lockyer", position: "CB", nationality: "WAL", age: 29, rating: 74, goalProb: 0.05 },
+      { name: "Mads Juel Andersen", position: "CB", nationality: "DEN", age: 26, rating: 73, goalProb: 0.04 },
+      { name: "Pelly Ruddock Mpanzu", position: "LB", nationality: "ENG", age: 30, rating: 74, goalProb: 0.06 },
+      { name: "Ryan Tunnicliffe", position: "CDM", nationality: "ENG", age: 31, rating: 73, goalProb: 0.07 },
+      { name: "Carlton Morris", position: "ST", nationality: "ENG", age: 28, rating: 75, goalProb: 0.24 },
+      { name: "Jordan Clark", position: "RW", nationality: "ENG", age: 30, rating: 74, goalProb: 0.15 },
+      { name: "Alfie Doughty", position: "LW", nationality: "ENG", age: 24, rating: 74, goalProb: 0.05 },
+      { name: "Elijah Adebayo", position: "ST", nationality: "ENG", age: 25, rating: 75, goalProb: 0.22 },
+      { name: "Matty Pearson", position: "CB", nationality: "ENG", age: 30, rating: 72, goalProb: 0.04 }
+    ]
+  },
+  "Burnley": {
+    name: "Burnley",
+    shortName: "BUR",
+    founded: 1882,
+    stadium: "Turf Moor",
+    capacity: 21944,
+    manager: "Vincent Kompany",
+    colors: { primary: "#630530", secondary: "#FFFFFF", accent: "#000000" },
+    teamStats: {
+      avgGoalsFor: 1.2,
+      avgGoalsAgainst: 1.7,
+      avgCorners: 4.6,
+      avgCards: 2.3,
+      homeStrength: 64,
+      awayStrength: 60
+    },
+    tactics: {
+      formation: "4-4-2",
+      playStyle: "Defensive",
+      attackingStyle: "Long Balls",
+      defensiveStyle: "Low Block"
+    },
+    players: [
+      { name: "James Trafford", position: "GK", nationality: "ENG", age: 21, rating: 73, goalProb: 0.01 },
+      { name: "Connor Roberts", position: "RB", nationality: "WAL", age: 28, rating: 73, goalProb: 0.03 },
+      { name: "Dara O'Shea", position: "CB", nationality: "IRL", age: 25, rating: 74, goalProb: 0.05 },
+      { name: "Nathan Collins", position: "CB", nationality: "IRL", age: 22, rating: 75, goalProb: 0.06 },
+      { name: "Charlie Taylor", position: "LB", nationality: "ENG", age: 30, rating: 72, goalProb: 0.04 },
+      { name: "Josh Brownhill", position: "CDM", nationality: "ENG", age: 28, rating: 75, goalProb: 0.08 },
+      { name: "Josh Cullen", position: "CM", nationality: "IRL", age: 27, rating: 74, goalProb: 0.07 },
+      { name: "Zian Flemming", position: "CM", nationality: "NED", age: 25, rating: 74, goalProb: 0.10 },
+      { name: "Nathan Tella", position: "RW", nationality: "ENG", age: 24, rating: 75, goalProb: 0.18 },
+      { name: "Anass Zaroury", position: "LW", nationality: "MAR", age: 23, rating: 73, goalProb: 0.14 },
+      { name: "Manuel Benson", position: "ST", nationality: "BEL", age: 26, rating: 74, goalProb: 0.20 }
+    ]
+  },
+  "Southampton": {
+    name: "Southampton",
+    shortName: "SOU",
+    founded: 1885,
+    stadium: "St Mary's Stadium",
+    capacity: 32384,
+    manager: "Russell Martin",
+    colors: {
+      primary: "#D71920",
+      secondary: "#FFFFFF",
+      accent: "#F2F2F2"
+    },
+    form: [],
+    teamStats: {
+      avgGoalsFor: 1.5,
+      avgGoalsAgainst: 1.5,
+      avgCorners: 5.2,
+      avgCards: 2.1,
+      homeStrength: 70,
+      awayStrength: 65
+    },
+    tactics: {
+      formation: "4-3-3",
+      playStyle: "Possession",
+      attackingStyle: "Short Passing",
+      defensiveStyle: "High Press"
+    },
+    players: [
+      { name: "Gavin Bazunu", position: "GK", nationality: "IRL", age: 22, rating: 75, goalProb: 0.01 },
+      { name: "Jan Bednarek", position: "CB", nationality: "POL", age: 28, rating: 76, goalProb: 0.04 },
+      { name: "Taylor Harwood-Bellis", position: "CB", nationality: "ENG", age: 22, rating: 76, goalProb: 0.05 },
+      { name: "Kyle Walker-Peters", position: "RB", nationality: "ENG", age: 27, rating: 78, goalProb: 0.03 },
+      { name: "Armel Bella-Kotchap", position: "CB", nationality: "GER", age: 22, rating: 77, goalProb: 0.04 },
+      { name: "Flynn Downes", position: "CDM", nationality: "ENG", age: 25, rating: 75, goalProb: 0.03 },
+      { name: "Will Smallbone", position: "CM", nationality: "IRL", age: 24, rating: 74, goalProb: 0.08 },
+      { name: "Adam Armstrong", position: "ST", nationality: "ENG", age: 27, rating: 78, goalProb: 0.25 },
+      { name: "Ché Adams", position: "ST", nationality: "SCO", age: 28, rating: 76, goalProb: 0.20 },
+      { name: "Stuart Armstrong", position: "CAM", nationality: "SCO", age: 32, rating: 76, goalProb: 0.15 },
+      { name: "Kamaldeen Sulemana", position: "LW", nationality: "GHA", age: 22, rating: 75, goalProb: 0.18 }
+    ]
+  }
+};
+
+// Tüm takım isimleri
+const teams = Object.keys(teamDatabase);
+
+// ==================== UTILITY FUNCTIONS ====================
+function cleanName(name) {
+  return name;
+}
+
+function showAlert(text, type = 'info') {
+  const goalAlert = document.getElementById("goalAlert");
+  goalAlert.textContent = text;
+  goalAlert.className = `show ${type}`;
+  clearTimeout(goalAlert.hideTimeout);
+  goalAlert.hideTimeout = setTimeout(() => {
+    goalAlert.classList.remove("show");
+  }, 3000);
+}
+
+// ==================== GAME STATE ====================
+let currentWeek = 0;
+let currentDay = 0;
+let weeks = [];
+let teamData = teams.map((name, i) => ({
+  name: name,
+  pts: 0,
+  win: 0,
+  draw: 0,
+  loss: 0,
+  gf: 0,
+  ga: 0,
+  played: 0,
+  color: teamDatabase[name]?.colors?.primary || `hsl(${i * 18}, 70%, 40%)`
+}));
+
+let isPlaying = false;
+let matchPrepared = false;
+let matchTimeouts = [];
+let timeInterval = null;
+let currentMinute = 0;
+let events = [];
+let index = 0;
+let currentMatchDiv = null;
+let forceFinish = null;
+
+// ==================== USER SYSTEM ====================
+let currentUser = null;
+let users = JSON.parse(localStorage.getItem('plsUsers') || '{}');
+
+// ==================== BETTING SYSTEM ====================
+let playerBalance = 10000;
+let currentBet = null;
+let betHistory = [];
+let totalBets = 0;
+let totalWins = 0;
+let totalLosses = 0;
+
+// ==================== ACHIEVEMENTS SYSTEM ====================
+let achievements = [
+  { id: 'first_bet', name: 'İlk İddia', desc: 'İlk iddianı oyna', icon: '🎯', unlocked: false, points: 10 },
+  { id: 'first_win', name: 'İlk Zafer', desc: 'İlk iddianı kazan', icon: '🏆', unlocked: false, points: 20 },
+  { id: 'rich', name: 'Zengin', desc: '50,000 TL ye ulaş', icon: '💎', unlocked: false, points: 100 },
+  { id: 'gambler', name: 'Bahisçi', desc: '100 iddia oyna', icon: '🎰', unlocked: false, points: 75 }
+];
+
+let achievementPoints = 0;
+let winStreak = 0;
+
+// ==================== SETTINGS ====================
+let gameSettings = {
+  gameSpeed: 150,
+  soundEffects: true,
+  autoSave: true,
+  darkMode: true
+};
+
+// ==================== DOM ELEMENTS ====================
+const fixtureDiv = document.getElementById("fixture");
+const standingsDiv = document.getElementById("standings");
+const playButton = document.getElementById("playButton");
+const goalAlert = document.getElementById("goalAlert");
+const balanceElement = document.getElementById("balance");
+const userProfileElement = document.getElementById("userProfile");
+const loginBtn = document.getElementById("loginBtn");
+const settingsBtn = document.getElementById("settingsBtn");
+
+// ==================== USER MANAGEMENT ====================
+function switchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#loginModal .tab-content').forEach(c => c.classList.remove('active'));
+  if (tabName === 'login') {
+    document.querySelector('.tab').classList.add('active');
+    document.getElementById('loginTab').classList.add('active');
+  } else {
+    document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('registerTab').classList.add('active');
+  }
+}
+
+function switchBalanceTab(tabName) {
+  document.querySelectorAll('#balanceModal .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#balanceModal .tab-content').forEach(c => c.classList.remove('active'));
+  const tabs = document.querySelectorAll('#balanceModal .tab');
+  const contents = document.querySelectorAll('#balanceModal .tab-content');
+  switch(tabName) {
+    case 'balance': tabs[0].classList.add('active'); contents[0].classList.add('active'); break;
+    case 'history': tabs[1].classList.add('active'); contents[1].classList.add('active'); updateBetHistory(); break;
+    case 'achievements': tabs[2].classList.add('active'); contents[2].classList.add('active'); updateAchievements(); break;
+    case 'leaderboard': tabs[3].classList.add('active'); contents[3].classList.add('active'); updateLeaderboard(); break;
+    case 'statistics': tabs[4].classList.add('active'); contents[4].classList.add('active'); showStatistics(); break;
+  }
+}
+
+function openModal(modalId) {
+  document.getElementById(modalId).style.display = 'flex';
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+
+function register(username, password) {
+  if (users[username]) {
+    alert('Bu kullanıcı adı zaten alınmış!');
+    return false;
+  }
+  users[username] = {
+    password: password,
+    balance: 10000,
+    totalBets: 0,
+    totalWins: 0,
+    totalLosses: 0,
+    betHistory: [],
+    achievements: JSON.parse(JSON.stringify(achievements)),
+    achievementPoints: 0,
+    winStreak: 0,
+    createdAt: new Date().toISOString()
+  };
+  localStorage.setItem('plsUsers', JSON.stringify(users));
+  return true;
+}
+
+function login(username, password) {
+  if (!users[username] || users[username].password !== password) {
+    alert('Kullanıcı adı veya şifre hatalı!');
+    return false;
+  }
+  currentUser = username;
+  loadUserData();
+  updateUI();
+  localStorage.setItem('plsCurrentUser', username);
+  return true;
+}
+
+function logout() {
+  if (currentUser) saveUserData();
+  currentUser = null;
+  localStorage.removeItem('plsCurrentUser');
+  updateUI();
+  closeModal('settingsModal');
+}
+
+function loadUserData() {
+  if (!currentUser) return;
+  const userData = users[currentUser];
+  playerBalance = userData.balance;
+  totalBets = userData.totalBets;
+  totalWins = userData.totalWins;
+  totalLosses = userData.totalLosses;
+  betHistory = userData.betHistory || [];
+  achievements = userData.achievements || JSON.parse(JSON.stringify(achievements));
+  achievementPoints = userData.achievementPoints || 0;
+  winStreak = userData.winStreak || 0;
+}
+
+function saveUserData() {
+  if (!currentUser) return;
+  users[currentUser] = {
+    ...users[currentUser],
+    balance: playerBalance,
+    totalBets: totalBets,
+    totalWins: totalWins,
+    totalLosses: totalLosses,
+    betHistory: betHistory,
+    achievements: achievements,
+    achievementPoints: achievementPoints,
+    winStreak: winStreak
+  };
+  localStorage.setItem('plsUsers', JSON.stringify(users));
+}
+
+function updateUI() {
+  if (currentUser) {
+    userProfileElement.style.display = 'block';
+    userProfileElement.textContent = `👤 ${currentUser}`;
+    loginBtn.style.display = 'none';
+  } else {
+    userProfileElement.style.display = 'none';
+    loginBtn.style.display = 'block';
+  }
+  updateBalance();
+}
+
+// ==================== ACHIEVEMENTS ====================
+function checkAchievements() {
+  let newUnlocks = 0;
+  achievements.forEach(achievement => {
+    if (achievement.unlocked) return;
+    let shouldUnlock = false;
+    switch(achievement.id) {
+      case 'first_bet': shouldUnlock = totalBets >= 1; break;
+      case 'first_win': shouldUnlock = totalWins >= 1; break;
+      case 'rich': shouldUnlock = playerBalance >= 50000; break;
+      case 'gambler': shouldUnlock = totalBets >= 100; break;
+    }
+    if (shouldUnlock) {
+      achievement.unlocked = true;
+      achievementPoints += achievement.points;
+      newUnlocks++;
+      showAlert(`🏆 Başarım Açıldı: ${achievement.name}!`, 'achievement');
+    }
+  });
+  if (newUnlocks > 0 && gameSettings.autoSave) saveUserData();
+}
+
+function updateAchievements() {
+  const achievementsList = document.getElementById('achievementsList');
+  achievementsList.innerHTML = achievements.map(a => `
+    <div class="achievement ${a.unlocked ? 'unlocked' : ''}">
+      <div><span class="achievement-icon">${a.icon}</span><strong>${a.name}</strong><p>${a.desc}</p></div>
+      <div>${a.unlocked ? '✅' : '🔒'}<br><small>${a.points}p</small></div>
+    </div>
+  `).join('');
+}
+
+function updateLeaderboard() {
+  const allUsers = Object.entries(users).map(([u, d]) => ({ u, b: d.balance, p: d.achievementPoints || 0 }))
+    .sort((a,b) => b.b - a.b);
+  const leaderboardList = document.getElementById('leaderboardList');
+  leaderboardList.innerHTML = allUsers.slice(0,10).map((u,i) => `
+    <div class="leaderboard-item">
+      <div class="leaderboard-rank">#${i+1}</div>
+      <div><strong>${u.u}</strong></div>
+      <div style="text-align: right;"><strong>${u.b.toLocaleString()} TL</strong></div>
+    </div>
+  `).join('');
+}
+
+function showStatistics() {
+  const content = document.getElementById("statsContent");
+  content.innerHTML = `
+    <div style="margin-bottom:20px;">
+      <select id="statTeamSelect">${teams.map(t => `<option>${t}</option>`).join('')}</select>
+    </div>
+    <div id="teamStatsDisplay"></div>
+  `;
+  updateTeamStats();
+}
+
+function updateTeamStats() {
+  const teamName = document.getElementById("statTeamSelect").value;
+  const team = teamDatabase[teamName];
+  const data = team?.teamStats || { avgGoalsFor: 0, avgGoalsAgainst: 0, avgCorners: 0, avgCards: 0 };
+  document.getElementById("teamStatsDisplay").innerHTML = `
+    <div style="background:#2c2c2c; padding:15px; border-radius:8px;">
+      <h3>📊 ${teamName} İstatistikleri</h3>
+      <p>🔹 Ort. Gol Atma: <strong>${data.avgGoalsFor}</strong></p>
+      <p>🔹 Ort. Gol Yeme: <strong>${data.avgGoalsAgainst}</strong></p>
+      <p>🔹 Ort. Korner: <strong>${data.avgCorners}</strong></p>
+      <p>🔹 Ort. Kart: <strong>${data.avgCards}</strong></p>
+      <p>🔹 Form: <strong>W-W-L-D-W</strong></p>
+      <p>🔹 Taktik: <strong>${team?.tactics?.formation || '-'}</strong></p>
+    </div>
+  `;
+}
+
+// ==================== BETTING SYSTEM ====================
+function calculateAdvancedOdds(t1, t2) {
+  const s1 = t1.teamStats.avgGoalsFor - t1.teamStats.avgGoalsAgainst;
+  const s2 = t2.teamStats.avgGoalsFor - t2.teamStats.avgGoalsAgainst;
+  const diff = s1 - s2;
+
+  return {
+    match: {
+      home: Math.max(1.3, 2.0 - diff * 0.3).toFixed(1),
+      draw: 3.2,
+      away: Math.max(1.3, 2.0 + diff * 0.3).toFixed(1)
+    },
+    over25: 1.8,
+    under25: 2.0,
+    cornersOver85: 1.9,
+    firstGoal: { home: 2.4, away: 2.6 }
+  };
+}
+
+function createBettingPanel(team1, team2) {
+  const t1 = teamDatabase[team1];
+  const t2 = teamDatabase[team2];
+  const odds = calculateAdvancedOdds(t1, t2);
+
+  const panel = document.createElement('div');
+  panel.className = 'betting-panel';
+  panel.innerHTML = `
+    <h4>🎯 İddia Seçenekleri</h4>
+    <div class="betting-options">
+      <div class="bet-option" data-type="teamA" data-odds="${odds.match.home}">
+        <strong>${t1.shortName}</strong><br><span style="color:#03dac5;">${odds.match.home}x</span>
+      </div>
+      <div class="bet-option" data-type="draw" data-odds="${odds.match.draw}">
+        <strong>Beraberlik</strong><br><span style="color:#03dac5;">${odds.match.draw}x</span>
+      </div>
+      <div class="bet-option" data-type="teamB" data-odds="${odds.match.away}">
+        <strong>${t2.shortName}</strong><br><span style="color:#03dac5;">${odds.match.away}x</span>
+      </div>
+    </div>
+    <div class="betting-options">
+      <div class="bet-option" data-type="over25" data-odds="${odds.over25}">
+        <strong>2.5 Üst</strong><br><span style="color:#03dac5;">${odds.over25}x</span>
+      </div>
+      <div class="bet-option" data-type="under25" data-odds="${odds.under25}">
+        <strong>2.5 Alt</strong><br><span style="color:#03dac5;">${odds.under25}x</span>
+      </div>
+      <div class="bet-option" data-type="cornersOver85" data-odds="${odds.cornersOver85}">
+        <strong>8.5 Üst Korner</strong><br><span style="color:#03dac5;">${odds.cornersOver85}x</span>
+      </div>
+    </div>
+    <div class="betting-options">
+      <div class="bet-option" data-type="firstGoal" data-team="home" data-odds="${odds.firstGoal.home}">
+        <strong>İlk Gol: ${t1.shortName}</strong><br><span style="color:#03dac5;">${odds.firstGoal.home}x</span>
+      </div>
+      <div class="bet-option" data-type="firstGoal" data-team="away" data-odds="${odds.firstGoal.away}">
+        <strong>İlk Gol: ${t2.shortName}</strong><br><span style="color:#03dac5;">${odds.firstGoal.away}x</span>
+      </div>
+    </div>
+    <h5>⚽ Golcü Bahisleri</h5>
+    <div class="betting-options">
+      ${(t1.players.slice(0,3).concat(t2.players.slice(0,3)))
+        .filter(p => p.goalProb > 0.05)
+        .map(p => `
+          <div class="bet-option" data-type="playerScore" data-player="${p.name}" data-odds="2.8">
+            <strong>${p.name}</strong><br><span style="color:#03dac5;">2.8x</span>
+          </div>
+        `).join('')}
+    </div>
+    <div class="bet-amount-container">
+      <label>İddia Miktarı:</label>
+      <input type="number" class="bet-amount-input" min="10" max="${playerBalance}" value="100">
+      <button class="bet-button" disabled>İddia Oyna</button>
+    </div>
+    <div id="current-bet-display"></div>
+  `;
+
+  setupBettingLogic(panel, team1, team2);
+  return panel;
+}
+
+function setupBettingLogic(panel, team1, team2) {
+  const options = panel.querySelectorAll('.bet-option');
+  const input = panel.querySelector('.bet-amount-input');
+  const button = panel.querySelector('.bet-button');
+  const display = panel.querySelector('#current-bet-display');
+  let selected = null;
+
+  options.forEach(opt => {
+    opt.addEventListener('click', () => {
+      if (!currentUser) {
+        alert('Giriş yapmalısınız!');
+        openModal('loginModal');
+        return;
+      }
+      options.forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      selected = {
+        type: opt.dataset.type,
+        odds: parseFloat(opt.dataset.odds) || 2.8,
+        name: opt.querySelector('strong').textContent
+          
+      };
+      if (opt.dataset.team) {
+  selected.team = opt.dataset.team;
+}
+      button.disabled = false;
+    });
+  });
+button.addEventListener('click', () => {
+  if (!selected || !input.value) return;
+
+  const amount = parseInt(input.value);
+  
+  if (amount > playerBalance || amount < 10) {
+    if (amount > playerBalance) {
+      alert('Yetersiz bakiye! +10.000 TL eklendi.');
+      playerBalance += 10000;
+    } else {
+      alert('Min. 10 TL');
+    }
+    return;
+  }
+    currentBet = { ...selected, amount, match: `${team1} vs ${team2}` };
+    playerBalance -= amount;
+    updateBalance();
+    display.innerHTML = `<div class="current-bet">✅ İddia: <strong>${selected.name}</strong> - ${amount} TL (${selected.odds}x)</div>`;
+    button.disabled = true;
+    options.forEach(o => o.style.pointerEvents = 'none');
+    input.disabled = true;
+  });
+}
+
+// ==================== GAME LOGIC ====================
+function updateBalance() {
+  balanceElement.textContent = `💰 ${playerBalance.toLocaleString()} TL`;
+  document.getElementById("modalBalance").textContent = `${playerBalance.toLocaleString()} TL`;
+  document.getElementById("totalBets").textContent = totalBets;
+  document.getElementById("totalWins").textContent = totalWins;
+  document.getElementById("totalLosses").textContent = totalLosses;
+  document.getElementById("achievementPoints").textContent = achievementPoints;
+}
+
+function updateStandings() {
+  standingsDiv.innerHTML = "<h2>Lig Tablosu</h2>";
+  teamData.sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
+  teamData.forEach((team, i) => {
+    const row = document.createElement("div");
+    row.className = "team-row";
+    row.style.backgroundColor = team.color;
+    row.innerHTML = `
+      <span>#${i + 1} ${team.name}</span>
+      <span>${team.pts} P | ${team.win}G ${team.draw}B ${team.loss}M | ${team.gf}:${team.ga}</span>
+    `;
+    standingsDiv.appendChild(row);
+  });
+}
+
+function generateWeekMatches() {
+  const shuffled = [...teams].sort(() => Math.random() - 0.5);
+  const matches = [];
+  for (let i = 0; i < 14; i += 2) {
+    matches.push([shuffled[i], shuffled[i + 1]]);
+    if (matches.length === 7) break;
+  }
+  return matches;
+}
+
+function finishMatch(callback, A, B, score1, score2, firstGoalTeam = null) {
+  isPlaying = false;
+  clearInterval(timeInterval);
+  matchTimeouts.forEach(clearTimeout);
+  matchTimeouts = [];
+
+  if (currentBet && currentUser) {
+    let result = 'lose', winAmount = 0;
+    const totalGoals = score1 + score2;
+
+    switch(currentBet.type) {
+      case 'teamA': if (score1 > score2) result = 'win'; break;
+      case 'teamB': if (score2 > score1) result = 'win'; break;
+      case 'draw': if (score1 === score2) result = 'win'; break;
+      case 'over25': if (totalGoals > 2.5) result = 'win'; break;
+      case 'under25': if (totalGoals < 2.5) result = 'win'; break;
+      case 'cornersOver85': result = Math.random() > 0.5 ? 'win' : 'lose'; break;
+      case 'firstGoal': 
+  if (firstGoalTeam) {
+    if (currentBet.team === 'home' && firstGoalTeam === 'A') {
+      result = 'win';
+    } else if (currentBet.team === 'away' && firstGoalTeam === 'B') {
+      result = 'win';
+    }
+  }
+  break;
+      case 'playerScore': result = score1 > 0 ? 'win' : 'lose'; break;
+    }
+
+    if (result === 'win') {
+      winAmount = Math.round(currentBet.amount * currentBet.odds);
+      playerBalance += winAmount;
+      totalWins++;
+      winStreak++;
+      showAlert(`🎉 Kazandınız! +${winAmount} TL`, 'win');
+    } else {
+      totalLosses++;
+      winStreak = 0;
+      showAlert(`😔 Kaybettiniz! -${currentBet.amount} TL`, 'lose');
+    }
+
+    betHistory.unshift({
+      match: currentBet.match,
+      bet: currentBet.name,
+      amount: currentBet.amount,
+      odds: currentBet.odds,
+      result,
+      winAmount,
+      finalScore: `${score1}-${score2}`,
+      date: new Date().toLocaleString('tr-TR')
+    });
+
+    totalBets++;
+    updateBalance();
+    checkAchievements();
+    currentBet = null;
+  }
+
+  A.played++; B.played++;
+  A.gf += score1; A.ga += score2;
+  B.gf += score2; B.ga += score1;
+  if (score1 > score2) { A.win++; B.loss++; A.pts += 3; }
+  else if (score2 > score1) { B.win++; A.loss++; B.pts += 3; }
+  else { A.draw++; B.draw++; A.pts++; B.pts++; }
+
+  if (currentMatchDiv) currentMatchDiv.className = "match finished-match";
+  playButton.textContent = "Sonraki Maç";
+  matchPrepared = false;
+  updateStandings();
+  currentDay++;
+  if (currentDay >= weeks[currentWeek].length) { currentDay = 0; currentWeek++; }
+  if (gameSettings.autoSave && currentUser) saveUserData();
+  callback();
+}
+
+function weightedRandom(max, weightA, weightB) {
+  const r = Math.random() * (weightA + weightB);
+  return r < weightA ? Math.floor(Math.random() * (max + 1)) : Math.floor(Math.random() * (max + 1));
+}
+
+function prepareMatch() {
+  if (!weeks[currentWeek]) weeks[currentWeek] = generateWeekMatches();
+  const matches = weeks[currentWeek];
+  const [team1, team2] = matches[currentDay];
+
+  let weekDiv = document.querySelector(`#week-${currentWeek}`);
+  if (!weekDiv) {
+    weekDiv = document.createElement('div');
+    weekDiv.className = 'week';
+    weekDiv.id = `week-${currentWeek}`;
+    weekDiv.innerHTML = `<h3>${currentWeek + 1}. Hafta</h3>`;
+    fixtureDiv.appendChild(weekDiv);
+  }
+
+  const dayDiv = document.createElement('div');
+  dayDiv.className = 'day';
+  dayDiv.innerHTML = `<strong>${currentDay + 1}. Gün</strong>`;
+  const matchDiv = document.createElement('div');
+  matchDiv.className = 'match waiting-match';
+  matchDiv.textContent = `${team1} vs ${team2}`;
+  const bettingPanel = createBettingPanel(team1, team2);
+  dayDiv.appendChild(matchDiv);
+  dayDiv.appendChild(bettingPanel);
+  weekDiv.appendChild(dayDiv);
+  currentMatchDiv = matchDiv;
+  matchPrepared = true;
+  playButton.textContent = "Maçı Başlat";
+  return { team1, team2, matchDiv };
+}
+
+function playMatchAnimated(t1Raw, t2Raw, callback, displayDiv) {
+  const A = teamData.find(t => t.name === t1Raw);
+  const B = teamData.find(t => t.name === t2Raw);
+  const t1 = teamDatabase[t1Raw];
+  const t2 = teamDatabase[t2Raw];
+  const g1 = Math.floor(Math.random() * 4);
+  const g2 = Math.floor(Math.random() * 4);
+  let score1 = 0, score2 = 0;
+  events = [];
+  for (let i = 0; i < g1; i++) events.push({ team: 'A', time: Math.random() * 90 });
+  for (let i = 0; i < g2; i++) events.push({ team: 'B', time: Math.random() * 90 });
+  events.sort((a, b) => a.time - b.time);
+  let firstGoalTeam = null;
+if (events.length > 0) {
+  firstGoalTeam = events[0].team;
+}
+
+  displayDiv.className = "match playing-match";
+  displayDiv.textContent = `${t1Raw} 0 - 0 ${t2Raw}`;
+  const timeCounter = document.createElement("div");
+  timeCounter.id = "timeCounter";
+  displayDiv.appendChild(timeCounter);
+  currentMinute = 0;
+  index = 0;
+  isPlaying = true;
+  playButton.textContent = "Hızlandır";
+
+  function updateTime() {
+    if (!isPlaying) return;
+    currentMinute++;
+    timeCounter.textContent = currentMinute + "'";
+    while (index < events.length && Math.floor(events[index].time) <= currentMinute) {
+      if (events[index].team === 'A') score1++;
+      else score2++;
+      displayDiv.textContent = `${t1Raw} ${score1} - ${score2} ${t2Raw}`;
+      displayDiv.appendChild(timeCounter);
+      showAlert(events[index].team === 'A' ? `${t1Raw} gol attı!` : `${t2Raw} gol attı!`, 'goal');
+      index++;
+    }
+    if (currentMinute >= 90) {
+      clearInterval(timeInterval);
+      finishMatch(callback, A, B, score1, score2, firstGoalTeam);
+    }
+  }
+
+  timeInterval = setInterval(updateTime, parseInt(gameSettings.gameSpeed));
+  return () => {
+    clearInterval(timeInterval);
+    currentMinute = 90;
+    timeCounter.textContent = "90'";
+    finishMatch(callback, A, B, g1, g2, firstGoalTeam);
+  };
+}
+
+function handlePlayButton() {
+  if (isPlaying) {
+    if (confirm("Maçı bitirmek istiyor musun?")) forceFinish?.();
+    return;
+  }
+  if (!matchPrepared) {
+    prepareMatch();
+    return;
+  }
+  const matches = weeks[currentWeek];
+  if (!matches) return;
+  const [team1, team2] = matches[currentDay];
+  forceFinish = playMatchAnimated(team1, team2, () => { forceFinish = null; }, currentMatchDiv);
+}
+
+function updateBetHistory() {
+  const h = document.getElementById('betHistory');
+  h.innerHTML = betHistory.length === 0 
+    ? '<p style="color: #666;">Henüz iddia oynamamışsınız.</p>'
+    : betHistory.map(b => `
+      <div class="bet-history-item ${b.result}">
+        <strong>${b.match}</strong> (${b.finalScore})<br>
+        <strong>İddia:</strong> ${b.bet} - ${b.amount} TL (${b.odds}x)<br>
+        <strong>Sonuç:</strong> ${b.result === 'win' ? `+${b.winAmount}` : 'Kayıp'}<br>
+        <small>${b.date}</small>
+      </div>
+    `).join('');
+}
+
+function saveSettings() {
+  gameSettings.gameSpeed = document.getElementById('gameSpeed').value;
+  gameSettings.soundEffects = document.getElementById('soundEffects').checked;
+  gameSettings.autoSave = document.getElementById('autoSave').checked;
+  gameSettings.darkMode = document.getElementById('darkMode').checked;
+  localStorage.setItem('plsSettings', JSON.stringify(gameSettings));
+  alert('Ayarlar kaydedildi!');
+  closeModal('settingsModal');
+}
+
+function loadSettings() {
+  const saved = localStorage.getItem('plsSettings');
+  if (saved) gameSettings = { ...gameSettings, ...JSON.parse(saved) };
+  document.getElementById('gameSpeed').value = gameSettings.gameSpeed;
+  document.getElementById('soundEffects').checked = gameSettings.soundEffects;
+  document.getElementById('autoSave').checked = gameSettings.autoSave;
+  document.getElementById('darkMode').checked = gameSettings.darkMode;
+}
+
+// ==================== EVENT LISTENERS ====================
+playButton.addEventListener('click', handlePlayButton);
+balanceElement.addEventListener('click', () => openModal('balanceModal'));
+loginBtn.addEventListener('click', () => openModal('loginModal'));
+settingsBtn.addEventListener('click', () => openModal('settingsModal'));
+userProfileElement.addEventListener('click', () => openModal('balanceModal'));
+
+document.getElementById('loginForm').addEventListener('submit', e => {
+  e.preventDefault();
+  login(document.getElementById('loginUsername').value, document.getElementById('loginPassword').value);
+  if (currentUser) closeModal('loginModal');
+});
+
+document.getElementById('registerForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const u = document.getElementById('registerUsername').value;
+  const p = document.getElementById('registerPassword').value;
+  const pc = document.getElementById('registerPasswordConfirm').value;
+  if (p !== pc) { alert('Şifreler eşleşmiyor!'); return; }
+  if (p.length < 6) { alert('Şifre en az 6 karakter olmalı!'); return; }
+  if (register(u, p)) {
+    alert('Kayıt başarılı!');
+    switchTab('login');
+  }
+});
+
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => {
+  if (e.target === m) m.style.display = 'none';
+}));
+
+// ==================== INIT ====================
+function initGame() {
+  const savedUser = localStorage.getItem('plsCurrentUser');
+  if (savedUser && users[savedUser]) {
+    currentUser = savedUser;
+    loadUserData();
+  }
+  loadSettings();
+  updateStandings();
+  updateBalance();
+  updateUI();
+  prepareMatch();
+}
+initGame();
+</script>
+</body>
+</html>
